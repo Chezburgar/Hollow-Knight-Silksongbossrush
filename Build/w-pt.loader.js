@@ -69,7 +69,7 @@ function createUnityInstance(t, n, l) {
     e(n, "productVersion", "1.0"),
     n)
         b[o] = n[o];
-    b.streamingAssetsUrl = new URL("StreamingAssets",document.querySelector('base').href).href;
+    b.streamingAssetsUrl = new URL(b.streamingAssetsUrl || "StreamingAssets",(document.querySelector('base') || {}).href || document.baseURI).href;
     var a = b.disabledCanvasEvents.slice();
     function i(e) {
         e.preventDefault()
@@ -2107,7 +2107,7 @@ function createUnityInstance(t, n, l) {
                 } catch (e) {}
             },
             hasUnityMarker: function(e) {
-                return true
+                return !!e && 2 <= e.length && 31 == e[0] && 139 == e[1]
             }
         },
         br: {

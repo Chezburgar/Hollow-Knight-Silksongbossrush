@@ -1,0 +1,397 @@
+:root {
+  --bg: #07070b;
+  --panel: rgba(14, 14, 22, 0.94);
+  --edge: #2a2b3d;
+  --edge-hot: #b8102e;
+  --ink: #e8e4dc;
+  --ink-dim: #8d8a9b;
+  --gold: #d8b25c;
+  --crimson: #c8142f;
+  --radius: 4px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* ---------------------------------------------------------------- canvas -- */
+
+#unity-container {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: #000;
+}
+
+#unity-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #000;
+  /* The game is pixel art at heart; keep it crisp when we downscale. */
+  image-rendering: auto;
+  touch-action: none;
+}
+
+/* ------------------------------------------------------------ boot screen -- */
+
+#boot-screen, #boot-error {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 35%, #15121c 0%, #07070b 70%);
+  z-index: 50;
+  transition: opacity 0.5s ease;
+}
+
+#boot-screen.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Author `display` beats the UA sheet's [hidden] rule, so restate it. */
+#boot-error[hidden] {
+  display: none;
+}
+
+.boot-inner {
+  width: min(560px, 88vw);
+  text-align: center;
+}
+
+.boot-title {
+  font-size: clamp(30px, 6vw, 52px);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+
+.boot-title span {
+  display: block;
+  font-size: 0.42em;
+  letter-spacing: 0.5em;
+  color: var(--crimson);
+  margin-top: 10px;
+}
+
+#boot-status {
+  margin-top: 26px;
+  font-size: 15px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+#boot-bar {
+  margin: 14px auto 10px;
+  width: 100%;
+  height: 3px;
+  background: #1d1d28;
+  overflow: hidden;
+}
+
+#boot-bar-fill {
+  height: 100%;
+  width: 0;
+  background: linear-gradient(90deg, var(--crimson), var(--gold));
+  transition: width 0.25s ease;
+}
+
+#boot-detail, .boot-note {
+  font-size: 12.5px;
+  color: var(--ink-dim);
+  min-height: 1.2em;
+  font-variant-numeric: tabular-nums;
+}
+
+.boot-note { margin-top: 30px; opacity: 0.65; }
+
+#boot-error pre {
+  white-space: pre-wrap;
+  text-align: left;
+  color: #ff8b8b;
+  background: #140d10;
+  border: 1px solid #3a1620;
+  padding: 14px;
+  font-size: 13px;
+}
+
+/* -------------------------------------------------------------- launcher -- */
+
+#launcher {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  background: rgba(4, 4, 8, 0.93);
+  backdrop-filter: blur(3px);
+}
+
+#launcher[hidden] { display: none; }
+
+.lx-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px clamp(14px, 3vw, 34px);
+  border-bottom: 1px solid var(--edge);
+  flex-wrap: wrap;
+}
+
+.lx-head h2 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.lx-head h2 b { color: var(--crimson); font-weight: 400; }
+
+.lx-spacer { flex: 1 1 auto; }
+
+.lx-tabs {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 4px;
+  padding: 0 clamp(14px, 3vw, 34px);
+  border-bottom: 1px solid var(--edge);
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.lx-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-dim);
+  padding: 12px 14px;
+  font: inherit;
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lx-tab:hover { color: var(--ink); }
+.lx-tab[aria-selected="true"] { color: var(--gold); border-bottom-color: var(--crimson); }
+
+.lx-body {
+  flex: 1 1 auto;
+  /* Without this a flex item's automatic minimum size is its content height,
+     which squeezes the header and tab strip to nothing on long tabs. */
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(14px, 2.5vw, 26px) clamp(14px, 3vw, 34px) 60px;
+}
+
+.lx-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 10px;
+}
+
+.lx-card {
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-left: 3px solid var(--edge);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.12s, background 0.12s;
+}
+
+.lx-card:hover, .lx-card:focus-visible {
+  border-color: var(--edge-hot);
+  border-left-color: var(--crimson);
+  background: #14131c;
+  transform: translateX(2px);
+  outline: none;
+}
+
+.lx-card .name {
+  display: block;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.lx-card .meta {
+  display: block;
+  font-size: 11.5px;
+  color: var(--ink-dim);
+  letter-spacing: 0.06em;
+}
+
+.lx-card .meta em { font-style: normal; color: var(--gold); }
+
+.lx-section-title {
+  margin: 22px 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  border-bottom: 1px solid var(--edge);
+  padding-bottom: 6px;
+}
+
+.lx-section-title:first-child { margin-top: 0; }
+
+.lx-btn {
+  appearance: none;
+  background: #16151f;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 8px 15px;
+  cursor: pointer;
+}
+
+.lx-btn:hover { border-color: var(--edge-hot); }
+.lx-btn.primary { background: var(--crimson); border-color: var(--crimson); }
+.lx-btn.primary:hover { background: #e01a38; }
+
+.lx-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+}
+
+.lx-field select,
+.lx-field input[type="search"],
+.lx-field input[type="text"],
+.lx-field input[type="number"] {
+  background: #16151f;
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.lx-note {
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--ink-dim);
+  max-width: 68ch;
+}
+
+.lx-note code {
+  background: #16151f;
+  border: 1px solid var(--edge);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 0.92em;
+  color: var(--gold);
+}
+
+.lx-warn {
+  border-left: 3px solid var(--gold);
+  background: rgba(216, 178, 92, 0.07);
+  padding: 10px 14px;
+  margin: 14px 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+/* --------------------------------------------------------------- overlay -- */
+
+#hud {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 14px;
+  background: rgba(6, 6, 11, 0.82);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  pointer-events: none;
+}
+
+#hud[hidden], #toast[hidden] { display: none; }
+
+#toast {
+  position: fixed;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 14px;
+  background: rgba(6, 6, 11, 0.86);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  font-size: 12.5px;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}
+
+#toast .stage { color: var(--gold); }
+#hud .stage { color: var(--gold); }
+#hud .timer { font-variant-numeric: tabular-nums; color: var(--ink-dim); }
+
+#launcher-tab {
+  position: fixed;
+  top: 10px;
+  right: 12px;
+  z-index: 31;
+  pointer-events: auto;
+}
+
+#launcher-tab[hidden] { display: none; }
+
+.lx-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 8px 0 18px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.08em;
+}
+
+.lx-stat-row b { color: var(--ink); font-weight: 400; }
+
+@media (max-width: 620px) {
+  .lx-head h2 { font-size: 15px; }
+  .lx-grid { grid-template-columns: 1fr; }
+}
