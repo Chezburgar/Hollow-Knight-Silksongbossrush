@@ -14,10 +14,20 @@
 import * as save from "./save.js";
 
 /*
- * The name of the object a save's respawn points at. "Death Respawn Marker" is
- * the one the build uses by default - it appears in the binary alongside the
- * "<scene> does not have a Death Respawn Marker Set" warning - but a scene can
- * name its marker differently, so it stays overridable.
+ * Silksong's PlayerData names its respawn fields:
+ *
+ *   atBench, respawnScene,
+ *   tempRespawnScene / tempRespawnMarker / tempRespawnType,
+ *   nonLethalRespawnScene / nonLethalRespawnMarker / nonLethalRespawnType,
+ *   hazardRespawnLocation / hazardRespawnFacing
+ *
+ * respawnMarkerName and respawnType, which Hollow Knight kept on PlayerData,
+ * are GameManager fields here - writing them into a save does nothing. The
+ * marker name below feeds the temp/non-lethal pairs, which do take one.
+ * "Death Respawn Marker" is the name the build uses by default; it appears in
+ * the binary beside the "<scene> does not have a Death Respawn Marker Set"
+ * warning. Which marker a given arena uses is not something the save records,
+ * so it stays overridable.
  */
 export const DEFAULT_MARKER = "Death Respawn Marker";
 const MARKER_KEY = "bossrush.marker";
@@ -139,17 +149,25 @@ export async function warp(slot, scene, opts = {}) {
 
   await ensureBackup(slot, bytes);
 
+  const marker = opts.marker || storedMarker();
   const patch = {
     respawnScene: scene,
-    respawnMarkerName: opts.marker || storedMarker(),
-    respawnType: opts.respawnType ?? 0, // 0 = respawn marker, 1 = bench
-    respawnFacingRight: opts.facingRight ?? true,
+    // The temp pair is what the game reads when it puts Hornet back somewhere
+    // that isn't a bench, which is exactly an arena.
+    tempRespawnScene: scene,
+    tempRespawnMarker: marker,
+    tempRespawnType: opts.respawnType ?? 0,
+    nonLethalRespawnScene: scene,
+    nonLethalRespawnMarker: marker,
+    nonLethalRespawnType: opts.respawnType ?? 0,
   };
   // If the save remembers Hornet sitting on a bench, clear it - the arena we
-  // are sending her to has no bench to sit on. Only keys the save already
-  // carries are touched, so we never invent fields this build does not read.
-  for (const key of ["atBench", "AtBench", "atBenchSitting"]) {
-    if (key in data.playerData) patch[key] = false;
+  // are sending her to has none.
+  if ("atBench" in data.playerData) patch.atBench = false;
+  // Only write fields this build's PlayerData actually has, plus respawnScene
+  // itself, so a warp can never bury a real value under a name it ignores.
+  for (const key of Object.keys(patch)) {
+    if (key !== "respawnScene" && !(key in data.playerData)) delete patch[key];
   }
   Object.assign(data.playerData, patch);
 

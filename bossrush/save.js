@@ -280,13 +280,35 @@ export async function findSaveDir(paths) {
   return null;
 }
 
+/**
+ * Slots that hold an actual save. A zero-length user<N>.dat is a slot the game
+ * treats as empty, so matching the filename alone would report saves that
+ * aren't there.
+ */
 export async function listSlots() {
   const paths = await listPaths();
-  return paths
-    .map((p) => /^\/idbfs\/[^/]+\/user(\d+)\.dat$/.exec(p))
-    .filter(Boolean)
-    .map((m) => ({ slot: Number(m[1]), path: m[0] }))
-    .sort((a, b) => a.slot - b.slot);
+  const found = [];
+  for (const p of paths) {
+    const m = /^\/idbfs\/[^/]+\/user(\d+)\.dat$/.exec(p);
+    if (!m) continue;
+    const bytes = await readFile(p);
+    if (!bytes || bytes.length === 0) continue;
+    found.push({ slot: Number(m[1]), path: p, size: bytes.length });
+  }
+  return found.sort((a, b) => a.slot - b.slot);
+}
+
+/** Remove a slot's file entirely, so the game sees an empty profile again. */
+export async function clearSlot(slot) {
+  const dir = await findSaveDir();
+  if (!dir) return false;
+  const db = await openDb();
+  try {
+    await tx(db, "readwrite", (store) => store.delete(`${dir}/user${slot}.dat`));
+  } finally {
+    db.close();
+  }
+  return true;
 }
 
 export async function readFile(path) {
