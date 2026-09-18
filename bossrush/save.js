@@ -5,6 +5,10 @@
  *
  *   JSON  ->  AES-256-ECB / PKCS7  ->  base64  ->  .NET BinaryFormatter string
  *
+ * The encryption is not assumed: the build's GameConfig asset
+ * (packed-gameconfig_assets_all_*.bundle) carries useSaveEncryption = 1, and
+ * the key below is the literal sitting in the IL2CPP metadata.
+ *
  * In a WebGL build those bytes live in the Emscripten IDBFS mirror, an
  * IndexedDB database named "/idbfs" whose FILE_DATA store is keyed by absolute
  * path (".../user1.dat"). Reading and rewriting that record is all a warp

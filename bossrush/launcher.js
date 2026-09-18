@@ -364,8 +364,7 @@ async function renderSetup() {
         { class: "lx-warn" },
         info.reason === "no-save-dir"
           ? "Silksong has not written anything to storage yet. Give it a moment at the title screen, then reopen this tab."
-          : `Slot ${state.slot} is empty. Start a game in Silksong once (any slot) so it writes a save file — ` +
-            "Boss Rush edits that file rather than inventing one, which is why it can never corrupt a slot it did not write.",
+          : noSaveHelp(state.slot),
       ),
     );
   } else {
@@ -470,6 +469,22 @@ async function renderSetup() {
   );
 }
 
+/*
+ * Silksong does not write user<N>.dat when you start a game - only when Hornet
+ * rests at a bench. "Start a game once" is therefore not enough, which is what
+ * left the slot reading empty. Spell the route out instead.
+ */
+function noSaveHelp(slot) {
+  return (
+    `Slot ${slot} has no save yet. Silksong only writes one when Hornet rests at a bench, so ` +
+    "starting a game is not enough on its own. From the title screen: Start Game, pick a profile, " +
+    "then on each of the two first-run calibration screens press Down to reach \u201cDone\u201d and " +
+    "Enter \u2014 Enter does nothing while the slider row is selected. Play to the first bench, about " +
+    "a minute in, and rest at it. Come back here and the slot will be ready. Boss Rush edits the file " +
+    "the game wrote rather than inventing one, which is why it can never corrupt a slot it did not create."
+  );
+}
+
 /* ------------------------------------------------------------------- runs -- */
 
 async function launch(scenes, label) {
@@ -477,9 +492,7 @@ async function launch(scenes, label) {
   if (!info.exists) {
     state.tab = "setup";
     render();
-    say(
-      `Slot ${state.slot} has no save yet. Start a game in Silksong once so it writes one, then pick your fight.`,
-    );
+    say(noSaveHelp(state.slot));
     return;
   }
   try {
