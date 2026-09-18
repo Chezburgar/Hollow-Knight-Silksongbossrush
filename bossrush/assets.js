@@ -16,15 +16,24 @@
  * Nothing is downloaded until the game actually asks for it.
  */
 
-import { asset } from "./config.js";
+import { candidateRoots } from "./config.js";
 
-const INDEX_URL = asset("StreamingAssets/aa/webgl-zip-index.json");
+const INDEX_PATH = "StreamingAssets/aa/webgl-zip-index.json";
 
-// Bundles Unity never asks for unless you reach the content they back. Listing
-// them here is purely informational - it drives the "what have we skipped"
-// readout in the launcher.
+/** Set once a root is confirmed to actually serve the archive. */
+let assetRoot = null;
+
+/** Absolute URL for one of the game's files, valid after installAssetInterceptor. */
+export function assetUrl(path) {
+  if (!assetRoot) throw new Error("asset root not resolved yet");
+  return assetRoot + path;
+}
+
+export function currentAssetRoot() {
+  return assetRoot;
+}
+
 let zipIndex = null;
-let indexPromise = null;
 
 /** Bytes pulled over the network this session, by bundle name. */
 export const stats = {
@@ -36,16 +45,40 @@ export const stats = {
   },
 };
 
-function loadIndex() {
-  if (!indexPromise) {
-    indexPromise = fetch(INDEX_URL)
-      .then((r) => {
-        if (!r.ok) throw new Error(`asset index ${r.status}`);
-        return r.json();
-      })
-      .then((j) => (zipIndex = j));
+/**
+ * A root counts as usable only if it serves the index *and* the archive parts.
+ * A Pages deploy that got truncated, or a host carrying just the launcher, will
+ * hand back the small file and 404 the big ones - checking both is what tells
+ * those apart before Unity starts asking for bundles.
+ */
+async function probeRoot(root) {
+  const res = await fetch(root + INDEX_PATH, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`index ${res.status}`);
+  const index = await res.json();
+  const part = await fetch(root + index.base + "1", { method: "HEAD" });
+  if (!part.ok) throw new Error(`archive ${part.status}`);
+  return index;
+}
+
+async function resolveRoot(onNote) {
+  const roots = candidateRoots();
+  const failures = [];
+  for (const root of roots) {
+    try {
+      onNote?.(root);
+      zipIndex = await probeRoot(root);
+      assetRoot = root;
+      return zipIndex;
+    } catch (err) {
+      failures.push(`${root} (${err.message})`);
+    }
   }
-  return indexPromise;
+  throw new Error(
+    "Could not find the game's asset files. Tried:\n  " +
+      failures.join("\n  ") +
+      "\n\nHost this page from a copy of the repository that includes " +
+      "Build/ and StreamingAssets/, or point it at one with ?assets=<url>.",
+  );
 }
 
 /**
@@ -62,7 +95,7 @@ function planReads(start, length) {
     const within = offset % partSize;
     const take = Math.min(remaining, partSize - within);
     reads.push({
-      url: asset(`${base}${part + 1}`),
+      url: assetRoot + `${base}${part + 1}`,
       from: within,
       to: within + take - 1,
       length: take,
@@ -173,9 +206,9 @@ async function serveBundle(name, entry, netFetch, onProgress) {
  * touched; everything else keeps the browser's own fetch with no added work,
  * which matters because Unity routes every asset request through window.fetch.
  */
-export async function installAssetInterceptor(onProgress) {
-  await loadIndex();
+export async function installAssetInterceptor(onProgress, onNote) {
   const netFetch = window.fetch.bind(window);
+  await resolveRoot(onNote);
   const files = zipIndex.files;
 
   window.fetch = function (resource, options) {

@@ -98,19 +98,42 @@ Other things that got faster:
 
 ---
 
-## Running it yourself
+## Hosting
+
+The page finds the game files itself rather than being told where they are. At
+boot it tries, in order:
+
+1. **The directory `index.html` was served from.** A clone, a local server, or a
+   GitHub Pages deploy of this repository all have `Build/` and
+   `StreamingAssets/` sitting right there — and those are the files this exact
+   build was deployed with, so the launcher and the game can't drift apart.
+2. **A CDN copy** on jsDelivr, pinned to the commit that introduced the archive
+   index and the loader fixes.
+
+A root only counts if it serves *both* the 2.7 KB archive index and the archive
+parts themselves, so a host carrying only the launcher falls through to the CDN
+instead of failing halfway through startup. If neither works the boot screen
+names both URLs and what each returned. `?assets=https://example.com/silksong/`
+overrides the lot.
+
+**GitHub Pages**: point Pages at this branch and it works as-is — Settings →
+Pages → Deploy from a branch. Bear in mind Pages has a 1 GB site limit and a
+100 GB/month bandwidth allowance, and the game is ~2.3 GB on disk with roughly
+1.4 GB pulled per fresh visitor. If Pages declines to serve the large files the
+page falls back to the CDN on its own; to force the CDN and spend no Pages
+bandwidth at all, append `?assets=https://cdn.jsdelivr.net/gh/chezburgar/hollow-knight-silksongbossrush@master/`
+once this branch is on `master`.
+
+**Locally**:
 
 ```bash
 python -m http.server 8000
 ```
 
-Then open <http://localhost:8000>. Served from `localhost`, the page uses the files in
-this repository. Anywhere else it pulls game assets from this repo on jsDelivr; point it
-somewhere else with `?assets=https://example.com/silksong/`.
-
-A server that honours HTTP range requests (nginx, Caddy, `npx http-server`) lets Boss
-Rush fetch exact byte ranges out of the archive. Python's `http.server` doesn't, so it
-falls back to whole 20 MB parts — slower, but correct either way.
+Then open <http://localhost:8000>. A server that honours HTTP range requests
+(nginx, Caddy, `npx http-server`) lets Boss Rush fetch exact byte ranges out of
+the archive. Python's `http.server` doesn't, so it falls back to whole 20 MB
+parts — slower, but correct either way.
 
 ## Layout
 

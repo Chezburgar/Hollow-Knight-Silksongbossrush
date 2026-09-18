@@ -11,8 +11,14 @@
  *    the loader tracking @latest while everything else tracked @master
  */
 
-import { installAssetInterceptor, requestPersistentStorage, stats } from "./assets.js";
-import { asset } from "./config.js";
+import {
+  assetUrl,
+  currentAssetRoot,
+  installAssetInterceptor,
+  requestPersistentStorage,
+  stats,
+} from "./assets.js";
+import { PAGE_ROOT } from "./config.js";
 
 const LEGACY_CACHES = /^hksilksongcache/;
 
@@ -91,18 +97,27 @@ export async function boot() {
   await dropLegacyCaches();
   await requestPersistentStorage();
 
-  status("Preparing assets", "reading the asset index (3 KB)");
-  await installAssetInterceptor((name, done, total) => {
-    const short = name.replace(/^packed-/, "").replace(/_assets_all.*$/, "");
-    status("Streaming assets", `${short} - ${mib(done)} / ${mib(total)}`);
-  });
+  status("Locating assets", "looking for the game files");
+  await installAssetInterceptor(
+    (name, done, total) => {
+      const short = name.replace(/^packed-/, "").replace(/_assets_all.*$/, "");
+      status("Streaming assets", `${short} - ${mib(done)} / ${mib(total)}`);
+    },
+    (root) => status("Locating assets", new URL(root).host),
+  );
 
-  const buildUrl = asset("Build");
+  const root = currentAssetRoot();
+  status(
+    "Preparing assets",
+    root === PAGE_ROOT ? "serving game files from this site" : `serving game files from ${new URL(root).host}`,
+  );
+
+  const buildUrl = assetUrl("Build");
   const config = {
     dataUrl: `${buildUrl}/w-pt.data.unityweb`,
     frameworkUrl: `${buildUrl}/w-pt.framework.js.unityweb`,
     codeUrl: `${buildUrl}/w-pt.wasm.unityweb`,
-    streamingAssetsUrl: asset("StreamingAssets"),
+    streamingAssetsUrl: assetUrl("StreamingAssets"),
     companyName: "EDUrocks Group, Truffled, GN-Math",
     productName: "Hollow Knight SilkSong",
     productVersion: "1.0",

@@ -45,8 +45,7 @@
           const box = document.getElementById("boot-error");
           box.hidden = false;
           document.getElementById("boot-error-text").textContent =
-            [err && err.name, (err && err.message) || String(err), err && err.stack]
-              .filter(Boolean).join("\n");
+            (err && err.message) || String(err);
           window.__bootError = err;
         });
     </script>

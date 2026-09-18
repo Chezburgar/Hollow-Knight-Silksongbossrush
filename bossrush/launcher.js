@@ -9,7 +9,7 @@
 import { ARENAS, ROOMS, GAUNTLETS } from "./arenas.js";
 import * as warp from "./warp.js";
 import { applyRenderScale, storedRenderScale, stats } from "./boot.js";
-import { storageEstimate } from "./assets.js";
+import { currentAssetRoot, storageEstimate } from "./assets.js";
 
 const SLOT_KEY = "bossrush.slot";
 const PENDING_KEY = "bossrush.pending";
@@ -335,11 +335,13 @@ async function renderSetup() {
 
   const est = await storageEstimate();
   const pulled = [...stats.bundles.values()].reduce((n, b) => n + b.compressed, 0);
+  const root = currentAssetRoot();
   body.append(
     h("div", { class: "lx-section-title" }, "Downloads"),
     h(
       "div",
       { class: "lx-stat-row" },
+      h("span", {}, "Game files from: ", h("b", {}, root ? new URL(root).host : "unknown")),
       h("span", {}, "Archived bundles pulled this session: ", h("b", {}, stats.bundles.size)),
       h("span", {}, "Bytes over the wire: ", h("b", {}, mib(pulled))),
       est ? h("span", {}, "Cached on disk: ", h("b", {}, mib(est.usage || 0))) : null,
